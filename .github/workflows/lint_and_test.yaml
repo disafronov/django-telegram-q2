@@ -1,0 +1,69 @@
+---
+name: Lint and test
+
+"on":
+  pull_request:
+    branches:
+      - main
+      - release
+
+jobs:
+  lint_and_test:
+    name: "Lint and test (Python ${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: database
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d database"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install gettext
+        run: sudo apt-get update -y && sudo apt-get install -y gettext
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --python ${{ matrix.python-version }}
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+
+      - name: Run all checks
+        run: make all
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+          DJANGO_DEBUG: "1"
+          DATABASE_HOST: 127.0.0.1
+          DATABASE_PORT: "5432"
+          DATABASE_NAME: database
+          DATABASE_USER: user
+          DATABASE_PASSWORD: password
+
+      - name: Audit dependencies
+        run: make audit
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
