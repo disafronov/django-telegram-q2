@@ -248,7 +248,3 @@ make all          # lint → test → dead-code
 
 Tests run against SQLite in-memory by default, and against PostgreSQL when
 `DATABASE_HOST` is set (e.g. via `compose.yml`).
-
-## License
-
-Apache-2.0. See [LICENSE](LICENSE).
