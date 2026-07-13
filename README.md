@@ -25,6 +25,7 @@ Telegram ──► intake (webhook or polling) ──► IntakeBuffer (debounce)
 - **At-least-once, resumable pipeline.** Every message becomes a `Job` with
   explicit `processing_*` / `delivery_*` timestamps and database-level
   check constraints, so a crashed worker or dropped task is safe to retry.
+  Delivery retries may produce duplicates after an ambiguous interruption.
 - **Webhook *and* long-polling ingest.** `telegram_setup` heals/registers the
   webhook and transparently falls back to polling when Telegram reports errors
   or the public `BASE_URL` is unavailable. The two never race (a `409` from
@@ -114,6 +115,7 @@ WEBHOOK_FALLBACK_PENDING_THRESHOLD = 100
 
 # How long a claimed-but-unfinished Job stays stuck before being reset (seconds).
 Q2_PROCESSING_STALE_JOB_SECONDS = 3600
+Q2_DELIVERY_STALE_JOB_SECONDS = 3600
 
 # Emoji sent to acknowledge receipt; empty string disables the reaction.
 TELEGRAM_ACK_REACTION = "🤖"
@@ -137,7 +139,8 @@ for the package models.
 | `IntakeBuffer` | Mutable accumulator of consecutive chat messages before a `Job` is created; one open buffer per `bot`+`chat`. |
 
 `Job.objects` is a `JobQuerySet` with `ready_for_processing()`,
-`stale_processing(cutoff)` and `ready_for_delivery()` for queue queries.
+`stale_processing(cutoff)`, `ready_for_delivery()` and `stale_delivery(cutoff)`
+for queue queries.
 
 ## How the pipeline runs
 
@@ -152,7 +155,10 @@ for the package models.
    text document (format auto-detected as HTML/Markdown/plain text), or the
    `processing_error` as a plain message. On failure it records `delivery_error`,
    marks the delivery attempt as finished, and re-raises. Retrying remains an
-   explicit admin action because Telegram sends are not idempotent.
+   explicit admin action. A claimed delivery that ends without either a result or
+   an error is reset after `Q2_DELIVERY_STALE_JOB_SECONDS` and retried by the
+   periodic delivery task. This provides at-least-once delivery, so an ambiguous
+   interruption may produce a duplicate Telegram message.
 
 `telegram_setup`, `telegram_ingest`, `telegram_deliver`,
 `telegram_flush_intake_buffers` and your processing function are all managed
@@ -218,6 +224,7 @@ management, stale-Job reset, and persisting the outcome.
 | `WEBHOOK_COOLDOWN_SECONDS` | yes | — | Quiet period after falling back to polling before retrying webhook. |
 | `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | yes | — | `pending_update_count` above which the webhook is considered unhealthy. |
 | `Q2_PROCESSING_STALE_JOB_SECONDS` | yes | — | Age after which a claimed-but-unfinished Job is reset for retry. |
+| `Q2_DELIVERY_STALE_JOB_SECONDS` | yes | — | Age after which a claimed-but-unfinished delivery is reset for retry. |
 | `TELEGRAM_ACK_REACTION` | yes | — | Emoji acknowledgement; `""` disables it. |
 | `BASE_URL` | no | `""` | Public base URL for webhook registration (empty ⇒ polling only). |
 | `TELEGRAM_INTAKE_DEBOUNCE_SECONDS` | no | `10` | Window for grouping consecutive chat messages into one `Job`. |

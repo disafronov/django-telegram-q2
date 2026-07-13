@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from ..client import TELEGRAM_MESSAGE_CHAR_LIMIT
 from ..models import Bot, Job
@@ -312,6 +313,47 @@ class TelegramDeliveryTests(TestCase):
     def test_deliver_poll_returns_when_no_jobs(self):
         telegram_deliver()
 
+    @override_settings(Q2_DELIVERY_STALE_JOB_SECONDS=60)
+    @patch("django_telegram_q2.telegram.tasks.send_document")
+    def test_deliver_poll_retries_stale_delivery(self, send_document):
+        stale_started_at = self.now - timedelta(seconds=61)
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hi",
+            raw_output="output",
+            processing_started_at=self.now,
+            processing_finished_at=self.now,
+            delivery_started_at=stale_started_at,
+        )
+
+        telegram_deliver()
+
+        send_document.assert_called_once()
+        job.refresh_from_db()
+        self.assertGreater(job.delivery_started_at, stale_started_at)
+        self.assertIsNotNone(job.delivery_finished_at)
+
+    @override_settings(Q2_DELIVERY_STALE_JOB_SECONDS=60)
+    @patch("django_telegram_q2.telegram.tasks.send_document")
+    def test_deliver_poll_keeps_fresh_delivery_claimed(self, send_document):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hi",
+            raw_output="output",
+            processing_started_at=self.now,
+            processing_finished_at=self.now,
+            delivery_started_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_document.assert_not_called()
+        job.refresh_from_db()
+        self.assertEqual(job.delivery_started_at, self.now)
+        self.assertIsNone(job.delivery_finished_at)
+
     @patch("django_telegram_q2.telegram.tasks.send_document")
     @patch("django_telegram_q2.telegram.tasks.send_message")
     def test_deliver_sends_error_when_job_has_error(self, send_message, send_document):
@@ -359,3 +401,7 @@ class TelegramDeliveryTests(TestCase):
         self.assertIsNone(job.processing_error)
         self.assertIn("api down", job.delivery_error)
         self.assertIsNotNone(job.delivery_finished_at)
+
+        send_document.reset_mock()
+        telegram_deliver()
+        send_document.assert_not_called()

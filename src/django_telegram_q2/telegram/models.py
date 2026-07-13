@@ -23,6 +23,14 @@ class JobQuerySet(models.QuerySet["Job"]):
             processing_error__isnull=True,
         )
 
+    def stale_delivery(self, cutoff: datetime) -> "JobQuerySet":
+        """Delivery started but not finished — candidates for re-queue."""
+        return self.filter(
+            delivery_started_at__lt=cutoff,
+            delivery_finished_at__isnull=True,
+            delivery_error__isnull=True,
+        )
+
     def ready_for_processing(self) -> "JobQuerySet":
         """Jobs waiting for processing (never started, no processing error)."""
         return self.filter(
@@ -121,6 +129,15 @@ class Job(models.Model):
                     processing_started_at__isnull=False,
                     processing_finished_at__isnull=True,
                     processing_error__isnull=True,
+                ),
+            ),
+            models.Index(
+                fields=["delivery_started_at"],
+                name="tg_job_stale_delivery_idx",
+                condition=models.Q(
+                    delivery_started_at__isnull=False,
+                    delivery_finished_at__isnull=True,
+                    delivery_error__isnull=True,
                 ),
             ),
             models.Index(
