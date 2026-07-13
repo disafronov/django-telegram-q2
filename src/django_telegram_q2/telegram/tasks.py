@@ -2,7 +2,6 @@
 
 import logging
 from datetime import timedelta
-from typing import NotRequired, TypedDict
 
 from django.conf import settings
 from django.db import transaction
@@ -24,24 +23,9 @@ from .client import (
 )
 from .intake import _flush_intake, accept_telegram_message
 from .models import Bot, IntakeBuffer, Job
+from .updates import parse_telegram_update
 
 logger = logging.getLogger(__name__)
-
-
-class _TelegramChat(TypedDict):
-    id: int
-
-
-class _TelegramMessage(TypedDict):
-    date: int
-    chat: _TelegramChat
-    text: NotRequired[str]
-    message_id: NotRequired[int]
-
-
-class _TelegramUpdate(TypedDict):
-    update_id: int
-    message: NotRequired[_TelegramMessage]
 
 
 def _manage_webhook_for_bot(bot: Bot) -> bool:
@@ -221,23 +205,15 @@ def telegram_ingest() -> None:
 
                     ingested = 0
                     for update in updates:
-                        message = update.get("message")
-                        if not message:
+                        message = parse_telegram_update(update)
+                        if message is None:
                             continue
-
-                        text = message.get("text")
-                        if not isinstance(text, str):
-                            continue
-
-                        text = text.strip()
-                        if not text or text.startswith("/"):
-                            continue
-
-                        chat_id = str(message["chat"]["id"])
-                        message_id = message.get("message_id")
-                        message_date = int(message["date"])
                         accept_telegram_message(
-                            current, chat_id, message_id, message_date, text
+                            current,
+                            message.chat_id,
+                            message.message_id,
+                            message.date,
+                            message.text,
                         )
                         ingested += 1
 
@@ -416,11 +392,4 @@ def telegram_flush_intake_buffers() -> None:
             )
             if refetched is None:
                 continue
-            Job.objects.create(
-                bot=refetched.bot,
-                reply_target=refetched.chat_id,
-                reply_to_message_id=refetched.reply_to_message_id,
-                raw_input=refetched.text,
-            )
-            refetched.flushed_at = timezone.now()
-            refetched.save(update_fields=["flushed_at", "updated_at"])
+            _flush_intake(refetched)

@@ -47,6 +47,10 @@ class WebhookViewTests(TestCase):
         response = self._post({})
         self.assertEqual(response.status_code, 200)
 
+    def test_skips_unsupported_update_before_authentication(self):
+        response = self._post({}, secret="")
+        self.assertEqual(response.status_code, 200)
+
     def test_skips_update_without_text(self):
         response = self._post({"message": {"chat": {"id": 1}}})
         self.assertEqual(response.status_code, 200)
@@ -61,14 +65,26 @@ class WebhookViewTests(TestCase):
 
     def test_returns_404_when_secret_missing(self):
         response = self._post(
-            {"message": {"chat": {"id": 1}, "text": "hello"}},
+            {
+                "message": {
+                    "chat": {"id": 1},
+                    "date": 1700000000,
+                    "text": "hello",
+                }
+            },
             secret="",
         )
         self.assertEqual(response.status_code, 404)
 
     def test_returns_404_for_unknown_secret(self):
         response = self._post(
-            {"message": {"chat": {"id": 1}, "text": "hello"}},
+            {
+                "message": {
+                    "chat": {"id": 1},
+                    "date": 1700000000,
+                    "text": "hello",
+                }
+            },
             secret="unknown-secret",
         )
         self.assertEqual(response.status_code, 404)
@@ -77,7 +93,15 @@ class WebhookViewTests(TestCase):
         self.bot.enabled = False
         self.bot.save(update_fields=["enabled"])
 
-        response = self._post({"message": {"chat": {"id": 1}, "text": "hello"}})
+        response = self._post(
+            {
+                "message": {
+                    "chat": {"id": 1},
+                    "date": 1700000000,
+                    "text": "hello",
+                }
+            }
+        )
         self.assertEqual(response.status_code, 404)
 
     def test_creates_intake_buffer_for_valid_message(self):
