@@ -68,21 +68,17 @@ class Worker(abc.ABC):
         return self._poll_next_job()
 
     def _get_job_by_pk(self, job_pk: int) -> Job | None:
-        """Fetch a specific Job by primary key."""
+        """Lock a specific Job only while it is ready for processing."""
         try:
             job = (
                 Job.objects.select_for_update(skip_locked=True)
+                .ready_for_processing()
                 .select_related("bot", *self.pk_select_related)
                 .get(pk=job_pk)
             )
         except Job.DoesNotExist:
-            logger.warning(
-                "Worker %s: job %d does not exist", type(self).__name__, job_pk
-            )
-            return None
-        if job.processing_finished_at is not None:
             logger.debug(
-                "Worker %s: job %d already processed, skipping",
+                "Worker %s: job %d is unavailable for processing, skipping",
                 type(self).__name__,
                 job_pk,
             )
