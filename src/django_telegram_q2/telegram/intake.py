@@ -8,9 +8,30 @@ from django.db import transaction
 from django.utils import timezone
 from django_q.tasks import schedule
 
-from .models import Bot, IntakeBuffer, Job
+from .models import Bot, IntakeBuffer, Job, TelegramUpdateReceipt
+from .updates import TelegramMessage
 
 logger = logging.getLogger(__name__)
+
+
+def accept_telegram_update(bot: Bot, message: TelegramMessage) -> bool:
+    """Accept a Telegram update exactly once across webhook and polling intake."""
+    with transaction.atomic():
+        _, created = TelegramUpdateReceipt.objects.get_or_create(
+            bot=bot,
+            update_id=message.update_id,
+        )
+        if not created:
+            return False
+
+        accept_telegram_message(
+            bot,
+            message.chat_id,
+            message.message_id,
+            message.date,
+            message.text,
+        )
+    return True
 
 
 def accept_telegram_message(
