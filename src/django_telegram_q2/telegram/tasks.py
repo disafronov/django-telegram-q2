@@ -298,6 +298,12 @@ def telegram_deliver(job_pk: int | None = None) -> None:
                 )
                 return
         else:
+            stale_seconds = settings.Q2_DELIVERY_STALE_JOB_SECONDS
+            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
+            Job.objects.select_for_update(skip_locked=True).stale_delivery(
+                stale_cutoff
+            ).update(delivery_started_at=None, updated_at=timezone.now())
+
             next_job = (
                 Job.objects.select_for_update(skip_locked=True)
                 .ready_for_delivery()
