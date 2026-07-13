@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "django-telegram-q2"
-version = "1.1.0rc1"
+version = "1.1.0rc2"
 description = "Django reusable app — Telegram Bot pipeline backed by django-q2"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
