@@ -358,3 +358,4 @@ class TelegramDeliveryTests(TestCase):
         job.refresh_from_db()
         self.assertIsNone(job.processing_error)
         self.assertIn("api down", job.delivery_error)
+        self.assertIsNotNone(job.delivery_finished_at)
