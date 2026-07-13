@@ -348,7 +348,14 @@ def telegram_deliver(job_pk: int | None = None) -> None:
             "Delivery: job %d failed: %s", job.pk, exc, exc_info=settings.DEBUG
         )
         job.delivery_error = sanitize_error(str(exc))
-        job.save(update_fields=["delivery_error", "updated_at"])
+        job.delivery_finished_at = timezone.now()
+        job.save(
+            update_fields=[
+                "delivery_error",
+                "delivery_finished_at",
+                "updated_at",
+            ]
+        )
         raise
 
     job.delivery_error = None
