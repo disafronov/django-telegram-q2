@@ -5,13 +5,15 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from ..models import Bot, IntakeBuffer, Job
+from ..intake import accept_telegram_update
+from ..models import Bot, IntakeBuffer, Job, TelegramUpdateReceipt
 from ..tasks import (
     TelegramAPIError,
     telegram_ack,
     telegram_ingest,
     telegram_setup,
 )
+from ..updates import TelegramMessage
 
 
 class PipelineTaskBranchTests(TestCase):
@@ -180,6 +182,41 @@ class PipelineTaskBranchTests(TestCase):
 
         self.assertTrue(IntakeBuffer.objects.filter(text="hello").exists())
         self.assertFalse(Job.objects.exists())
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 12)
+
+    @patch(
+        "django_telegram_q2.telegram.tasks.get_updates",
+        return_value=[
+            {
+                "update_id": 11,
+                "message": {
+                    "message_id": 7,
+                    "chat": {"id": 123},
+                    "date": 1700000000,
+                    "text": "hello",
+                },
+            },
+        ],
+    )
+    def test_ingest_skips_update_already_accepted_by_webhook(self, get_updates):
+        accept_telegram_update(
+            self.bot,
+            TelegramMessage(
+                update_id=11,
+                chat_id="123",
+                message_id=7,
+                date=1700000000,
+                text="hello",
+            ),
+        )
+
+        telegram_ingest()
+
+        buffer = IntakeBuffer.objects.get()
+        self.assertEqual(buffer.text, "hello")
+        self.assertEqual(buffer.message_count, 1)
+        self.assertEqual(TelegramUpdateReceipt.objects.count(), 1)
         self.bot.refresh_from_db()
         self.assertEqual(self.bot.telegram_update_offset, 12)
 

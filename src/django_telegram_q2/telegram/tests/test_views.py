@@ -5,7 +5,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 
-from ..models import Bot, IntakeBuffer, Job
+from ..models import Bot, IntakeBuffer, Job, TelegramUpdateReceipt
 
 
 class WebhookViewTests(TestCase):
@@ -21,6 +21,9 @@ class WebhookViewTests(TestCase):
         return reverse("webhook")
 
     def _post(self, data: dict, secret: str | None = None):
+        if "message" in data and "update_id" not in data:
+            data = {"update_id": getattr(self, "_update_id", 0) + 1, **data}
+            self._update_id = data["update_id"]
         headers = {
             "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": (
                 secret if secret is not None else self.bot.webhook_secret
@@ -127,6 +130,27 @@ class WebhookViewTests(TestCase):
         self.assertIsNotNone(buffer.last_received_at)
         self.assertIsNone(buffer.flushed_at)
         self.assertFalse(Job.objects.exists())
+
+    def test_repeated_update_is_accepted_only_once(self):
+        update = {
+            "update_id": 100,
+            "message": {
+                "chat": {"id": 42},
+                "message_id": 99,
+                "date": 1700000000,
+                "text": "hello world",
+            },
+        }
+
+        first = self._post(update)
+        second = self._post(update)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(TelegramUpdateReceipt.objects.count(), 1)
+        buffer = IntakeBuffer.objects.get()
+        self.assertEqual(buffer.text, "hello world")
+        self.assertEqual(buffer.message_count, 1)
 
     def test_merges_consecutive_messages_into_one_buffer(self):
         self._post(

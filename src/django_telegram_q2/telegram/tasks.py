@@ -21,7 +21,7 @@ from .client import (
     set_message_reaction,
     set_webhook,
 )
-from .intake import _flush_intake, accept_telegram_message
+from .intake import _flush_intake, accept_telegram_update
 from .models import Bot, IntakeBuffer, Job
 from .updates import parse_telegram_update
 
@@ -208,14 +208,8 @@ def telegram_ingest() -> None:
                         message = parse_telegram_update(update)
                         if message is None:
                             continue
-                        accept_telegram_message(
-                            current,
-                            message.chat_id,
-                            message.message_id,
-                            message.date,
-                            message.text,
-                        )
-                        ingested += 1
+                        if accept_telegram_update(current, message):
+                            ingested += 1
 
                     if ingested:
                         logger.info(

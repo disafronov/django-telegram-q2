@@ -7,18 +7,20 @@ class TelegramUpdateParserTests(SimpleTestCase):
     def test_normalizes_text_message(self):
         result = parse_telegram_update(
             {
+                "update_id": 100,
                 "message": {
                     "chat": {"id": 42},
                     "message_id": 7,
                     "date": 1700000000,
                     "text": "  hello  ",
-                }
+                },
             }
         )
 
         self.assertEqual(
             result,
             TelegramMessage(
+                update_id=100,
                 chat_id="42",
                 message_id=7,
                 date=1700000000,
@@ -29,11 +31,12 @@ class TelegramUpdateParserTests(SimpleTestCase):
     def test_accepts_string_chat_id_and_missing_message_id(self):
         result = parse_telegram_update(
             {
+                "update_id": 101,
                 "message": {
                     "chat": {"id": "chat"},
                     "date": 1700000000,
                     "text": "hello",
-                }
+                },
             }
         )
 
@@ -44,36 +47,50 @@ class TelegramUpdateParserTests(SimpleTestCase):
         unsupported = (
             [],
             {},
-            {"message": None},
-            {"message": {}},
-            {"message": {"text": 1}},
-            {"message": {"text": "  "}},
-            {"message": {"text": "/start"}},
-            {"message": {"text": "hello"}},
-            {"message": {"text": "hello", "chat": None}},
-            {"message": {"text": "hello", "chat": {"id": None}}},
-            {"message": {"text": "hello", "chat": {"id": True}}},
+            {"update_id": True},
+            {"update_id": "bad"},
+            {"update_id": 1, "message": None},
+            {"update_id": 1, "message": {}},
+            {"update_id": 1, "message": {"text": 1}},
+            {"update_id": 1, "message": {"text": "  "}},
+            {"update_id": 1, "message": {"text": "/start"}},
+            {"update_id": 1, "message": {"text": "hello"}},
+            {"update_id": 1, "message": {"text": "hello", "chat": None}},
             {
+                "update_id": 1,
+                "message": {"text": "hello", "chat": {"id": None}},
+            },
+            {
+                "update_id": 1,
+                "message": {"text": "hello", "chat": {"id": True}},
+            },
+            {
+                "update_id": 1,
                 "message": {
                     "text": "hello",
                     "chat": {"id": 1},
                     "message_id": "bad",
-                }
+                },
             },
             {
+                "update_id": 1,
                 "message": {
                     "text": "hello",
                     "chat": {"id": 1},
                     "message_id": False,
-                }
+                },
             },
-            {"message": {"text": "hello", "chat": {"id": 1}}},
             {
+                "update_id": 1,
+                "message": {"text": "hello", "chat": {"id": 1}},
+            },
+            {
+                "update_id": 1,
                 "message": {
                     "text": "hello",
                     "chat": {"id": 1},
                     "date": False,
-                }
+                },
             },
         )
 

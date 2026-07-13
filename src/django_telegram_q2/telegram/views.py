@@ -7,7 +7,7 @@ from django.http import HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .intake import accept_telegram_message
+from .intake import accept_telegram_update
 from .models import Bot
 from .updates import parse_telegram_update
 
@@ -43,12 +43,6 @@ def webhook(request: HttpRequest) -> HttpResponse:
         logger.info("Webhook: unverified request")
         return HttpResponse("not found", status=404)
 
-    accept_telegram_message(
-        bot,
-        message.chat_id,
-        message.message_id,
-        message.date,
-        message.text,
-    )
+    accept_telegram_update(bot, message)
 
     return HttpResponse("ok")

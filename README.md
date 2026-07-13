@@ -26,6 +26,8 @@ Telegram ──► intake (webhook or polling) ──► IntakeBuffer (debounce)
   explicit `processing_*` / `delivery_*` timestamps and database-level
   check constraints, so a crashed worker or dropped task is safe to retry.
   Delivery retries may produce duplicates after an ambiguous interruption.
+- **Idempotent intake.** Durable per-bot update receipts deduplicate Telegram
+  retries across both webhook and polling transport paths before buffering.
 - **Webhook *and* long-polling ingest.** `telegram_setup` heals/registers the
   webhook and transparently falls back to polling when Telegram reports errors
   or the public `BASE_URL` is unavailable. The two never race (a `409` from
@@ -135,6 +137,7 @@ for the package models.
 | Model | Purpose |
 | --- | --- |
 | `Bot` | A Telegram bot identity: encrypted `telegram_api_token`, `webhook_secret`, poll `telegram_update_offset`, webhook state. |
+| `TelegramUpdateReceipt` | Internal idempotency receipt keyed by bot and Telegram `update_id`. |
 | `Job` | One pipeline execution: `raw_input` → (`raw_output` \| `processing_error`) → delivery state. Carries DB-level check constraints and partial indexes for queue queries. |
 | `IntakeBuffer` | Mutable accumulator of consecutive chat messages before a `Job` is created; one open buffer per `bot`+`chat`. |
 
@@ -145,9 +148,11 @@ for queue queries.
 ## How the pipeline runs
 
 1. **Intake.** Either the `/webhook/` view (when a webhook is registered) or
-   `telegram_ingest` (long-polling) calls `accept_telegram_message`. Messages
-   within `TELEGRAM_INTAKE_DEBOUNCE_SECONDS` of the last one are appended to the
-   open `IntakeBuffer`; otherwise the buffer is flushed into a `Job` first.
+   `telegram_ingest` (long-polling) calls `accept_telegram_update`. It atomically
+   records `(bot, update_id)` and ignores an update already accepted through
+   either transport. New messages pass to the debounce buffer: messages within
+   `TELEGRAM_INTAKE_DEBOUNCE_SECONDS` of the last one are appended to the open
+   `IntakeBuffer`; otherwise the buffer is flushed into a `Job` first.
 2. **Processing.** A `post_save` signal on the new `Job` enqueues
    `Q2_PROCESSING_FUNC(job_pk)`. Your worker runs `process()`, stores the result
    on the `Job`, and a second signal enqueues `telegram_deliver`.

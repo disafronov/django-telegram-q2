@@ -85,6 +85,26 @@ class Bot(models.Model):
         )
 
 
+class TelegramUpdateReceipt(models.Model):
+    """Durable idempotency receipt for an update accepted from Telegram."""
+
+    bot = models.ForeignKey(Bot, on_delete=models.CASCADE)
+    update_id = models.BigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Telegram Update Receipt"
+        verbose_name_plural = "Telegram Update Receipts"
+        app_label = "telegram"
+        db_table = "telegram_updatereceipt"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bot", "update_id"],
+                name="tg_uniq_update_receipt_per_bot",
+            ),
+        ]
+
+
 class Job(models.Model):
     """A single pipeline execution artifact — from Telegram message to response."""
 

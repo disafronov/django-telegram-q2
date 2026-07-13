@@ -9,6 +9,7 @@ from typing import Any
 class TelegramMessage:
     """Normalized text message accepted by the intake pipeline."""
 
+    update_id: int
     chat_id: str
     message_id: int | None
     date: int
@@ -18,6 +19,10 @@ class TelegramMessage:
 def parse_telegram_update(update: object) -> TelegramMessage | None:
     """Return a normalized text message, or ``None`` for an ignored update."""
     if not isinstance(update, Mapping):
+        return None
+
+    update_id: Any = update.get("update_id")
+    if isinstance(update_id, bool) or not isinstance(update_id, int):
         return None
 
     message = update.get("message")
@@ -49,6 +54,7 @@ def parse_telegram_update(update: object) -> TelegramMessage | None:
         return None
 
     return TelegramMessage(
+        update_id=update_id,
         chat_id=str(chat_id),
         message_id=message_id,
         date=message_date,

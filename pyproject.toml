@@ -59,6 +59,7 @@ dev = [
 [tool.black]
 line-length = 88
 include = "\\.pyi?$"
+target-version = [ "py311" ]
 
 [tool.isort]
 profile = "black"
