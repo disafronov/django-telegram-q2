@@ -120,6 +120,27 @@ class WorkerExtendedTests(TestCase):
         job.refresh_from_db()
         self.assertEqual(job.raw_output, "existing")
 
+    def test_run_by_pk_skips_job_already_claimed_for_processing(self):
+        processed = False
+
+        class _Sub(Worker):
+            def process(self, *, bot_id, raw_input):
+                nonlocal processed
+                processed = True
+                return "overwritten", None
+
+        job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
+        Job.objects.filter(pk=job.pk).update(
+            processing_started_at="2024-01-01 00:00:00+00",
+        )
+
+        _Sub().run(job_pk=job.pk)
+
+        job.refresh_from_db()
+        self.assertFalse(processed)
+        self.assertIsNone(job.processing_finished_at)
+        self.assertIsNone(job.raw_output)
+
     def test_save_result_with_error(self):
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
