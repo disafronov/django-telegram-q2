@@ -94,4 +94,4 @@ def _flush_intake(buffer: IntakeBuffer) -> None:
         raw_input=buffer.text,
     )
     buffer.flushed_at = timezone.now()
-    buffer.save(update_fields=("flushed_at",))
+    buffer.save(update_fields=("flushed_at", "updated_at"))

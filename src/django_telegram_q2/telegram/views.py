@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from .intake import accept_telegram_message
 from .models import Bot
+from .updates import parse_telegram_update
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +28,8 @@ def webhook(request: HttpRequest) -> HttpResponse:
         logger.warning("Webhook: invalid JSON body")
         return HttpResponse("invalid json", status=400)
 
-    message = body.get("message")
-    if not message:
-        return HttpResponse("ok")
-
-    text = message.get("text")
-    if not isinstance(text, str):
-        return HttpResponse("ok")
-
-    text = text.strip()
-    if not text or text.startswith("/"):
+    message = parse_telegram_update(body)
+    if message is None:
         return HttpResponse("ok")
 
     secret = request.META.get(_SECRET_TOKEN_HEADER)
@@ -50,9 +43,12 @@ def webhook(request: HttpRequest) -> HttpResponse:
         logger.info("Webhook: unverified request")
         return HttpResponse("not found", status=404)
 
-    chat_id = str(message["chat"]["id"])
-    message_id = message.get("message_id")
-    message_date = int(message["date"])
-    accept_telegram_message(bot, chat_id, message_id, message_date, text)
+    accept_telegram_message(
+        bot,
+        message.chat_id,
+        message.message_id,
+        message.date,
+        message.text,
+    )
 
     return HttpResponse("ok")
