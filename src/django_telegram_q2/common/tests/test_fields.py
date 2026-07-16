@@ -94,6 +94,16 @@ def test_cipher_raises_on_bad_key_length():
             _cipher()
 
 
+@pytest.mark.parametrize("bad_length", [16, 24])
+def test_cipher_rejects_non_siv_key_lengths(bad_length: int) -> None:
+    """AES-SIV requires 32/48/64 bytes; 16 and 24 must be rejected."""
+    bad_key = bytes(bad_length).hex()
+    with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": bad_key}):
+        _cipher.cache_clear()
+        with pytest.raises(RuntimeError, match="AES-SIV requires"):
+            _cipher()
+
+
 def test_field_encryption_key_change_makes_old_data_unreadable():
     key1 = AESSIV.generate_key(256).hex()
     with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": key1}):
