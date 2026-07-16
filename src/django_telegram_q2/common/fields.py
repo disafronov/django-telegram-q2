@@ -24,11 +24,11 @@ def _cipher() -> AESSIV:
             'python -c "import secrets; print(secrets.token_bytes(32).hex())"'
         )
     key = bytes.fromhex(raw)
-    if len(key) not in (16, 24, 32):
+    if len(key) not in (32, 48, 64):
         raise RuntimeError(
             f"FIELD_ENCRYPTION_KEY decodes to {len(key)} bytes — "
-            "AES-SIV requires 16, 24, or 32 bytes "
-            "(128, 192, or 256 bits)."
+            "AES-SIV requires 32, 48, or 64 bytes "
+            "(256, 384, or 512 bits)."
         )
     return AESSIV(key)
 
