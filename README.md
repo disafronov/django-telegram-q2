@@ -236,7 +236,7 @@ management, stale-Job reset, and persisting the outcome.
 
 | Env var | Required | Description |
 | --- | --- | --- |
-| `FIELD_ENCRYPTION_KEY` | yes | 32-byte (16/24/32 accepted) key, hex-encoded, for AES-SIV field encryption. |
+| `FIELD_ENCRYPTION_KEY` | yes | 32/48/64-byte key (64/96/128 hex chars), hex-encoded, for AES-SIV field encryption. |
 
 ## Development
 
