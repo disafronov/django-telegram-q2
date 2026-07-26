@@ -5,7 +5,7 @@ pipeline: inbound messages are buffered, turned into `Job` records, processed by
 a worker you supply, and the result is delivered back to the chat — all driven by
 [django-q2](https://github.com/django-q2/django-q2) task scheduling.
 
-```
+```text
 Telegram ──► intake (webhook or polling) ──► IntakeBuffer (debounce)
                                                    │
                                                    ▼
@@ -130,11 +130,11 @@ for the package models.
 
 ## Models
 
-| Model            | Purpose                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| `Bot`            | A Telegram bot identity: encrypted `telegram_api_token`, `webhook_secret`, poll `telegram_update_offset`, webhook state. |
-| `Job`            | One pipeline execution: `raw_input` → (`raw_output` \| `processing_error`) → delivery state. Carries DB-level check constraints and partial indexes for queue queries. |
-| `IntakeBuffer`   | Mutable accumulator of consecutive chat messages before a `Job` is created; one open buffer per `bot`+`chat`. |
+| Model | Purpose |
+| --- | --- |
+| `Bot` | A Telegram bot identity: encrypted `telegram_api_token`, `webhook_secret`, poll `telegram_update_offset`, webhook state. |
+| `Job` | One pipeline execution: `raw_input` → (`raw_output` \| `processing_error`) → delivery state. Carries DB-level check constraints and partial indexes for queue queries. |
+| `IntakeBuffer` | Mutable accumulator of consecutive chat messages before a `Job` is created; one open buffer per `bot`+`chat`. |
 
 `Job.objects` is a `JobQuerySet` with `ready_for_processing()`,
 `stale_processing(cutoff)` and `ready_for_delivery()` for queue queries.
@@ -207,24 +207,24 @@ management, stale-Job reset, and persisting the outcome.
 
 ## Settings reference
 
-| Setting                              | Required | Default | Description                                                        |
-| ------------------------------------ | -------- | ------- | ------------------------------------------------------------------ |
-| `Q2_PROCESSING_FUNC`                 | yes      | —       | Dotted path to the processing entry function `(job_pk: int) -> None`. |
-| `Q2_TELEGRAM_SETUP_MINUTES`          | yes      | —       | Interval for `telegram_setup` (webhook health).                    |
-| `Q2_TELEGRAM_INGEST_MINUTES`         | yes      | —       | Interval for `telegram_ingest` (polling).                          |
-| `Q2_TELEGRAM_DELIVER_MINUTES`        | yes      | —       | Interval for `telegram_deliver` (drain deliveries).               |
-| `Q2_TELEGRAM_INTAKE_FLUSH_MINUTES`   | yes      | —       | Interval for the intake-buffer safety flush.                       |
-| `Q2_PROCESSING_MINUTES`              | yes      | —       | Interval for your processing schedule.                             |
-| `WEBHOOK_COOLDOWN_SECONDS`           | yes      | —       | Quiet period after falling back to polling before retrying webhook. |
-| `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | yes      | —       | `pending_update_count` above which the webhook is considered unhealthy. |
-| `Q2_PROCESSING_STALE_JOB_SECONDS`    | yes      | —       | Age after which a claimed-but-unfinished Job is reset for retry.    |
-| `TELEGRAM_ACK_REACTION`              | yes      | —       | Emoji acknowledgement; `""` disables it.                          |
-| `BASE_URL`                           | no       | `""`    | Public base URL for webhook registration (empty ⇒ polling only).   |
-| `TELEGRAM_INTAKE_DEBOUNCE_SECONDS`   | no       | `10`    | Window for grouping consecutive chat messages into one `Job`.      |
+| Setting | Required | Default | Description |
+| --- | --- | --- | --- |
+| `Q2_PROCESSING_FUNC` | yes | — | Dotted path to the processing entry function `(job_pk: int) -> None`. |
+| `Q2_TELEGRAM_SETUP_MINUTES` | yes | — | Interval for `telegram_setup` (webhook health). |
+| `Q2_TELEGRAM_INGEST_MINUTES` | yes | — | Interval for `telegram_ingest` (polling). |
+| `Q2_TELEGRAM_DELIVER_MINUTES` | yes | — | Interval for `telegram_deliver` (drain deliveries). |
+| `Q2_TELEGRAM_INTAKE_FLUSH_MINUTES` | yes | — | Interval for the intake-buffer safety flush. |
+| `Q2_PROCESSING_MINUTES` | yes | — | Interval for your processing schedule. |
+| `WEBHOOK_COOLDOWN_SECONDS` | yes | — | Quiet period after falling back to polling before retrying webhook. |
+| `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | yes | — | `pending_update_count` above which the webhook is considered unhealthy. |
+| `Q2_PROCESSING_STALE_JOB_SECONDS` | yes | — | Age after which a claimed-but-unfinished Job is reset for retry. |
+| `TELEGRAM_ACK_REACTION` | yes | — | Emoji acknowledgement; `""` disables it. |
+| `BASE_URL` | no | `""` | Public base URL for webhook registration (empty ⇒ polling only). |
+| `TELEGRAM_INTAKE_DEBOUNCE_SECONDS` | no | `10` | Window for grouping consecutive chat messages into one `Job`. |
 
-| Env var             | Required | Description                                            |
-| ------------------- | -------- | ------------------------------------------------------ |
-| `FIELD_ENCRYPTION_KEY` | yes   | 32-byte (16/24/32 accepted) key, hex-encoded, for AES-SIV field encryption. |
+| Env var | Required | Description |
+| --- | --- | --- |
+| `FIELD_ENCRYPTION_KEY` | yes | 32-byte (16/24/32 accepted) key, hex-encoded, for AES-SIV field encryption. |
 
 ## Development
 
@@ -241,7 +241,3 @@ make all          # lint → test → dead-code
 
 Tests run against SQLite in-memory by default, and against PostgreSQL when
 `DATABASE_HOST` is set (e.g. via `compose.yml`).
-
-## License
-
-Apache-2.0. See [LICENSE](LICENSE).
