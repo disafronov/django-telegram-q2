@@ -1,6 +1,6 @@
 name: Assign pull request
 
-on:
+"on":
   pull_request_target:
     types:
       - opened
