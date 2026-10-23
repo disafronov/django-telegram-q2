@@ -17,3 +17,7 @@ updates:
       interval: "daily"
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "mypy"
+        versions:
+          - ">=2.0"
