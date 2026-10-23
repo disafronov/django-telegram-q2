@@ -1,7 +1,8 @@
 # Python version is pinned via `.python-version` (used by uv and CI).
 PYTHON_VERSION := $(shell tr -d '[:space:]' < .python-version)
 
-UV = uv run
+UV = uv
+UV_RUN = $(UV) run --locked
 
 .PHONY: all clean dead-code format help install lint test
 
@@ -11,34 +12,35 @@ help: ## Show this help message
 
 install: ## Install dependencies
 	@echo "Installing dependencies..."
-	uv python install $(PYTHON_VERSION)
-	uv sync --python $(PYTHON_VERSION)
+	$(UV) python install $(PYTHON_VERSION)
+	$(UV) sync --locked --python $(PYTHON_VERSION)
 	@echo "Installing pre-commit hooks..."
-	uv run pre-commit install
+	$(UV_RUN) pre-commit install
 
 format: ## Format code
 	@echo "Formatting code..."
-	$(UV) black . && $(UV) isort .
+	$(UV_RUN) black . && \
+	$(UV_RUN) isort .
 
 lint: ## Run linting tools
 	@echo "Running linting tools..."
-	$(UV) black --check . && \
-	$(UV) isort --check-only . && \
-	$(UV) flake8 . && \
-	$(UV) mypy && \
-	$(UV) bandit -c pyproject.toml -r src/
+	$(UV_RUN) black --check . && \
+	$(UV_RUN) isort --check-only . && \
+	$(UV_RUN) flake8 . && \
+	$(UV_RUN) mypy && \
+	$(UV_RUN) bandit -c pyproject.toml -r src/
 
 audit: ## Check dependencies for known vulnerabilities
 	@echo "Auditing dependencies..."
-	uv run pip-audit
+	$(UV_RUN) pip-audit
 
 dead-code: ## Check for dead code using vulture
 	@echo "Checking for dead code..."
-	uv run vulture
+	$(UV_RUN) vulture
 
 test: ## Run tests with coverage
 	@echo "Running tests with coverage..."
-	$(UV) python -m pytest -v --cov --cov-report=term-missing --cov-report=html
+	$(UV_RUN) python -m pytest -v --cov --cov-report=term-missing --cov-report=html
 
 all: lint test dead-code ## Run lint, test, and dead-code check
 	@echo "All checks completed successfully!"
