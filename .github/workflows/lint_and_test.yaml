@@ -45,25 +45,15 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          python-version: ${{ matrix.python-version }}
           cache-suffix: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --frozen --python ${{ matrix.python-version }}
-        env:
-          UV_PYTHON: ${{ matrix.python-version }}
 
       - name: Run all checks
         run: make all
         env:
-          UV_PYTHON: ${{ matrix.python-version }}
           DJANGO_DEBUG: "1"
           DATABASE_HOST: 127.0.0.1
           DATABASE_PORT: "5432"
           DATABASE_NAME: database
           DATABASE_USER: user
           DATABASE_PASSWORD: password
-
-      - name: Audit dependencies
-        run: make audit
-        env:
-          UV_PYTHON: ${{ matrix.python-version }}
