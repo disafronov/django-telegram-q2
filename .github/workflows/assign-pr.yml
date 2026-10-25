@@ -8,7 +8,11 @@ name: Assign pull request
       - unassigned
 
 permissions:
-  issues: write
+  pull-requests: write
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   assign:
@@ -44,4 +48,4 @@ jobs:
             --method POST \
             "repos/${GH_REPO}/issues/${PR_NUMBER}/assignees" \
             -f "assignees[]=${assignee}" \
-            --silent\
+            --silent
