@@ -1,3 +1,9 @@
+## [1.1.0-rc.6](https://github.com/disafronov/django-telegram-q2/compare/v1.1.0-rc.5...v1.1.0-rc.6) (2026-10-26)
+
+### Bug Fixes
+
+* align semantic-release policy and committer sign-off ([55f7590](https://github.com/disafronov/django-telegram-q2/commit/55f759044c9f28cc86991b16b1d19598f58d0835))
+
 ## [1.1.0-rc.5](https://github.com/disafronov/django-telegram-q2/compare/v1.1.0-rc.4...v1.1.0-rc.5) (2026-10-25)
 
 ### Bug Fixes
