@@ -5,7 +5,7 @@ name: Audit
   pull_request:
     branches:
       - main
-      - release
+      - rc
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
