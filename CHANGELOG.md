@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/disafronov/django-telegram-q2/compare/v1.1.0...v1.1.1) (2026-11-10)
+
+### Code Refactoring
+
+* deps ([ae3141e](https://github.com/disafronov/django-telegram-q2/commit/ae3141ee03da8485c569ea1b420cfe4e713a0662))
+
 ## [1.1.0](https://github.com/disafronov/django-telegram-q2/compare/v1.0.0...v1.1.0) (2026-11-03)
 
 ### Features
